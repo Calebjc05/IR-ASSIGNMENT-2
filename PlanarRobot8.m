@@ -1,7 +1,7 @@
 classdef PlanarRobot8 < handle
     properties
         % Link lengths for the planar robot fingers
-        finger1_link1 = 0.05;      % Length of the first link of finger 1
+        finger1_link1 = 0.05;      % Length of the first link of finger 1 hi im here
         finger1_link2 = 0.05;      % Length of the second link of finger 1
         finger1_angles = [pi pi/2];   % Initial joint angles for finger 1
 
