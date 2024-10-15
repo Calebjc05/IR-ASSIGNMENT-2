@@ -22,10 +22,10 @@ classdef PlanarRobot8 < handle
         gripper_steps = 50;   % Number of steps for gripper animation
 
         % Safety variable
-        safety = true;   % Toggle for enabling safety features
+        safety = false;   % Toggle for enabling safety features
 
         % Enable/Disable Gripper
-        enable_gripper = true; % Toggle for enabling the gripper
+        enable_gripper = false; % Toggle for enabling the gripper
 
         % Brick positions and handles
         brick_1_h; % Handle for brick 1
@@ -248,160 +248,128 @@ classdef PlanarRobot8 < handle
             self.finger2_angles = close_angles_finger2;
        end
         
-        function generatePointCloud(self)
-        
-            stepRads = deg2rad(60); % Step size for incrementing the joint angles
-            qlim = self.r.model.qlim; % Get joint limits for all 7 joints
-            pointCloudeSize = prod(floor((qlim(1:6,2)-qlim(1:6,1))/stepRads + 1)); % Total number of possible combinations
-            pointCloud = zeros(pointCloudeSize, 3); % Preallocate point cloud matrix
-            counter = 1;
-            tic
-            
-            % Loop through all 7 joints
-            for q1 = qlim(1,1):0.1:qlim(1,2)
-                for q2 = qlim(2,1):stepRads:qlim(2,2)
-                    for q3 = qlim(3,1):stepRads:qlim(3,2)
-                        for q4 = qlim(4,1):stepRads:qlim(4,2)
-                            for q5 = qlim(5,1):stepRads:qlim(5,2)
-                                for q6 = qlim(6,1):stepRads:qlim(6,2)
-                                    for q7 = qlim(7,1):stepRads:qlim(7,2)
-                                        q = [q1, q2, q3, q4, q5, q6, q7]; % Joint configuration
-                                        tr = self.r.model.fkineUTS(q); % Forward kinematics
-                                        pointCloud(counter,:) = tr(1:3, 4)'; % Store (x, y, z) coordinates
-                                        counter = counter + 1; % Increment counter
-
-                                        % Display progress
-                                        if mod(counter/pointCloudeSize * 100, 1) == 0
-                                            disp(['After ', num2str(toc), ' seconds, completed ', num2str(counter/pointCloudeSize * 100 / 8 ), '% of poses']);
-                                        end
-                                    end
-                                end
-                            end
-                        end
-                    end
-                    plot3(pointCloud(:,1),pointCloud(:,2),pointCloud(:,3),'r.');
-        
-                end
-            end
-        end
-
-
 
        function animateRobot(self)
-            % Define transformations for waypoints and objects
-            % Transformation for waypoint A
-            T1 = self.waypoint_A;
+
+        T1 = transl(0.3,0.16,1.4)
+        T2 = transl(0.3,0.16,1.5)
         
-            % Transformation for brick 1 position
-            T2 = transl(self.brick_1_pos) * transl(0, 0, self.finger1_link1) * trotx(pi);
+            % % Define transformations for waypoints and objects
+            % % Transformation for waypoint A
+            % T1 = self.waypoint_A;
         
-            % Transformation for waypoint B
-            T3 = self.waypoint_A;
+            % % Transformation for brick 1 position
+            % T2 = transl(self.brick_1_pos) * transl(0, 0, self.finger1_link1) * trotx(pi);
         
-            % Transformation for wall 1 position
-            T4 = transl(0.3, 0.15, 1.2988 + self.finger1_link1) * trotx(pi);
+            % % Transformation for waypoint B
+            % T3 = self.waypoint_A;
         
-            % Transformation for waypoint A (repeated)
-            T5 = self.waypoint_A;
+            % % Transformation for wall 1 position
+            % T4 = transl(0.3, 0.15, 1.2988 + self.finger1_link1) * trotx(pi);
         
-            % Transformation for brick 2 position
-            T6 = transl(self.brick_2_pos) * transl(0, 0, self.finger1_link1) * trotx(pi);
+            % % Transformation for waypoint A (repeated)
+            % T5 = self.waypoint_A;
         
-            % Transformation for waypoint B (repeated)
-            T7 = self.waypoint_A;
+            % % Transformation for brick 2 position
+            % T6 = transl(self.brick_2_pos) * transl(0, 0, self.finger1_link1) * trotx(pi);
         
-            % Transformation for wall 2 position
-            T8 = transl(0.3, 0.15 - self.brick_length, 1.2988 + self.finger1_link1) * trotx(pi);
+            % % Transformation for waypoint B (repeated)
+            % T7 = self.waypoint_A;
         
-            % Transformation for waypoint A (repeated)
-            T9 = self.waypoint_A;
+            % % Transformation for wall 2 position
+            % T8 = transl(0.3, 0.15 - self.brick_length, 1.2988 + self.finger1_link1) * trotx(pi);
         
-            % Transformation for brick 3 position
-            T10 = transl(self.brick_3_pos) * transl(0, 0, self.finger1_link1) * trotx(pi);
+            % % Transformation for waypoint A (repeated)
+            % T9 = self.waypoint_A;
         
-            % Transformation for waypoint B (repeated)
-            T11 = self.waypoint_C;
+            % % Transformation for brick 3 position
+            % T10 = transl(self.brick_3_pos) * transl(0, 0, self.finger1_link1) * trotx(pi);
         
-            % Transformation for wall 3 position
-            T12 = transl(0.3, 0.15 - 2 * self.brick_length, 1.2988 + self.finger1_link1) * trotx(pi);
+            % % Transformation for waypoint B (repeated)
+            % T11 = self.waypoint_C;
         
-            % Transformation for waypoint A (repeated)
-            T13 = self.waypoint_A;
+            % % Transformation for wall 3 position
+            % T12 = transl(0.3, 0.15 - 2 * self.brick_length, 1.2988 + self.finger1_link1) * trotx(pi);
         
-            % Transformation for brick 4 position
-            T14 = transl(self.brick_4_pos) * transl(0, 0, self.finger1_link1) * trotx(pi);
+            % % Transformation for waypoint A (repeated)
+            % T13 = self.waypoint_A;
         
-            % Transformation for waypoint B (repeated)
-            T15 = self.waypoint_A;
+            % % Transformation for brick 4 position
+            % T14 = transl(self.brick_4_pos) * transl(0, 0, self.finger1_link1) * trotx(pi);
         
-            % Transformation for wall 4 position
-            T16 = transl(0.3, 0.15, 1.2988 + self.finger1_link1 + self.brick_height) * trotx(pi);
+            % % Transformation for waypoint B (repeated)
+            % T15 = self.waypoint_A;
         
-            % Transformation for waypoint A (repeated)
-            T17 = self.waypoint_A;
+            % % Transformation for wall 4 position
+            % T16 = transl(0.3, 0.15, 1.2988 + self.finger1_link1 + self.brick_height) * trotx(pi);
         
-            % Transformation for brick 5 position
-            T18 = transl(self.brick_5_pos) * transl(0, 0, self.finger1_link1) * trotx(pi);
+            % % Transformation for waypoint A (repeated)
+            % T17 = self.waypoint_A;
         
-            % Transformation for waypoint B (repeated)
-            T19 = self.waypoint_A;
+            % % Transformation for brick 5 position
+            % T18 = transl(self.brick_5_pos) * transl(0, 0, self.finger1_link1) * trotx(pi);
         
-            % Transformation for wall 5 position
-            T20 = transl(0.3, 0.15 - self.brick_length, 1.2988 + self.finger1_link1 + self.brick_height) * trotx(pi);
+            % % Transformation for waypoint B (repeated)
+            % T19 = self.waypoint_A;
         
-            % Transformation for waypoint A (repeated)
-            T21 = self.waypoint_A;
+            % % Transformation for wall 5 position
+            % T20 = transl(0.3, 0.15 - self.brick_length, 1.2988 + self.finger1_link1 + self.brick_height) * trotx(pi);
         
-            % Transformation for brick 6 position
-            T22 = transl(self.brick_6_pos) * transl(0, 0, self.finger1_link1) * trotx(pi);
+            % % Transformation for waypoint A (repeated)
+            % T21 = self.waypoint_A;
         
-            % Transformation for waypoint B (repeated)
-            T23 = self.waypoint_C;
+            % % Transformation for brick 6 position
+            % T22 = transl(self.brick_6_pos) * transl(0, 0, self.finger1_link1) * trotx(pi);
         
-            % Transformation for wall 6 position
-            T24 = transl(0.3, 0.15 - 2 * self.brick_length, 1.2988 + self.finger1_link1 + self.brick_height) * trotx(pi);
+            % % Transformation for waypoint B (repeated)
+            % T23 = self.waypoint_C;
         
-            % Transformation for waypoint A (repeated)
-            T25 = self.waypoint_A;
+            % % Transformation for wall 6 position
+            % T24 = transl(0.3, 0.15 - 2 * self.brick_length, 1.2988 + self.finger1_link1 + self.brick_height) * trotx(pi);
         
-            % Transformation for brick 7 position
-            T26 = transl(self.brick_7_pos) * transl(0, 0, self.finger1_link1) * trotx(pi);
+            % % Transformation for waypoint A (repeated)
+            % T25 = self.waypoint_A;
         
-            % Transformation for waypoint B (repeated)
-            T27 = self.waypoint_A;
+            % % Transformation for brick 7 position
+            % T26 = transl(self.brick_7_pos) * transl(0, 0, self.finger1_link1) * trotx(pi);
         
-            % Transformation for wall 7 position
-            T28 = transl(0.3, 0.15, 1.2988 + self.finger1_link1 + self.brick_height * 2) * trotx(pi);
+            % % Transformation for waypoint B (repeated)
+            % T27 = self.waypoint_A;
         
-            % Transformation for waypoint A (repeated)
-            T29 = self.waypoint_A;
+            % % Transformation for wall 7 position
+            % T28 = transl(0.3, 0.15, 1.2988 + self.finger1_link1 + self.brick_height * 2) * trotx(pi);
         
-            % Transformation for brick 8 position
-            T30 = transl(self.brick_8_pos) * transl(0, 0, self.finger1_link1) * trotx(pi);
+            % % Transformation for waypoint A (repeated)
+            % T29 = self.waypoint_A;
         
-            % Transformation for waypoint B (repeated)
-            T31 = self.waypoint_A;
+            % % Transformation for brick 8 position
+            % T30 = transl(self.brick_8_pos) * transl(0, 0, self.finger1_link1) * trotx(pi);
         
-            % Transformation for wall 8 position
-            T32 = transl(0.3, 0.15 - self.brick_length, 1.2988 + self.finger1_link1 + self.brick_height * 2) * trotx(pi);
+            % % Transformation for waypoint B (repeated)
+            % T31 = self.waypoint_A;
         
-            % Transformation for waypoint A (repeated)
-            T33 = self.waypoint_A;
+            % % Transformation for wall 8 position
+            % T32 = transl(0.3, 0.15 - self.brick_length, 1.2988 + self.finger1_link1 + self.brick_height * 2) * trotx(pi);
         
-            % Transformation for brick 9 position
-            T34 = transl(self.brick_9_pos) * transl(0, 0, self.finger1_link1) * trotx(pi);
+            % % Transformation for waypoint A (repeated)
+            % T33 = self.waypoint_A;
         
-            % Transformation for waypoint B (repeated)
-            T35 = self.waypoint_C;
+            % % Transformation for brick 9 position
+            % T34 = transl(self.brick_9_pos) * transl(0, 0, self.finger1_link1) * trotx(pi);
         
-            % Transformation for wall 9 position
-            T36 = transl(0.3, 0.15 - 2 * self.brick_length, 1.2988 + self.finger1_link1 + self.brick_height * 2) * trotx(pi);
+            % % Transformation for waypoint B (repeated)
+            % T35 = self.waypoint_C;
         
-            % Concatenate all transformations into a 3D array
-            T_Array = cat(3, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, ...
-                T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, ...
-                T21, T22, T23, T24, T25, T26, T27, T28, T29, T30, ...
-                T31, T32, T33, T34, T35, T36);
+            % % Transformation for wall 9 position
+            % T36 = transl(0.3, 0.15 - 2 * self.brick_length, 1.2988 + self.finger1_link1 + self.brick_height * 2) * trotx(pi);
+        
+            % % Concatenate all transformations into a 3D array
+            % T_Array = cat(3, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, ...
+            %     T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, ...
+            %     T21, T22, T23, T24, T25, T26, T27, T28, T29, T30, ...
+            %     T31, T32, T33, T34, T35, T36);
+
+            T_Array = cat(3, T1, T2)
 
 
 
@@ -418,21 +386,6 @@ classdef PlanarRobot8 < handle
 
                 % Display the current step in the transformation sequence
                 fprintf('On transform step %d of %d\n', i, size(T_Array, 3));
-
-                %Logging robot task (moving to waypoint)
-                if mod(i, 2) ~= 0
-                    disp("Step Objective: Moving to Waypoint")
-                end
-
-                %Logging robot task (placing brick in wall)
-                if mod(i, 4) == 0
-                    disp("Step Objective: Deploying brick in wall strucuture")
-                end
-
-                %Logging robot task (Locating brick)
-                if mod(i-2, 4) == 0
-                    disp("Step Objective: Locating brick")
-                end
 
 
                 % Compute the inverse kinematics for the current transformation
@@ -453,28 +406,8 @@ classdef PlanarRobot8 < handle
                         self.finger_1.plot(self.finger1_angles, 'nowrist', 'noname', 'noshadow', 'nobase');
                         self.finger_2.plot(self.finger2_angles, 'nowrist', 'noname', 'noshadow', 'nobase');
                     end
-            
-                    % Update the brick's position every 4 steps
-                    if mod(i, 4) == 3 || mod(i, 4) == 0
-                        % Determine the correct brick handle based on the index
-                        brick_index = ceil(i / 4);
-            
-                        % Get the end-effector pose of the UR3e
-                        end_effector_pose = self.r.model.fkine(self.r.model.getpos).T;
-            
-                        % Reset the brick's vertices to their original positions
-                        set(self.brick_handles(brick_index), 'Vertices', self.original_vertices);
-            
-                        % Get the current vertices of the brick
-                        vertices = get(self.brick_handles(brick_index), 'Vertices');
-                        brickVerticesHom = [vertices, ones(size(vertices,1),1)];
-            
-                        % Apply the transformation to each vertex
-                        transformed_vertices = [end_effector_pose * transl(-self.brick_1_pos(1), -self.brick_1_pos(2), -self.table_height + self.finger1_link1 - 0.04) * brickVerticesHom']'; %#ok<NBRAK1>
-            
-                        % Update the brick's position with the transformed vertices
-                        set(self.brick_handles(brick_index), 'Vertices', transformed_vertices(:, 1:3));
-                    end
+        
+
             
                     % Set fixed axis limits for the plot
                     axis([-2 2 -2 2 0 2]);
