@@ -76,6 +76,9 @@ classdef PlanarRobot8 < handle
             table_h = PlaceObject("mytable1.ply", [self.table_x_axis_offset 0 0]);
             verts = [get(table_h, 'Vertices'), ones(size(get(table_h, 'Vertices'), 1), 1)] * trotz(pi/2);
             set(table_h, 'Vertices', verts(:, 1:3));
+
+            % Place Balls
+            Golfball_h = PlaceObject("golfball_lowpoly.ply", [0, 1.3, 0.35]); %#ok<NASGU>
             
             % Conditionally place safety features if safety is enabled
             if self.safety
@@ -97,6 +100,7 @@ classdef PlanarRobot8 < handle
                 
                 % Place fire extinguisher
                 fireextiguisher_h = PlaceObject("fireExtinguisher.ply", [-3 1 0]); %#ok<NASGU>
+                
                 
             end
             
@@ -165,6 +169,7 @@ classdef PlanarRobot8 < handle
             T1 = transl(0.3, 0.16, 1.4);
             T2 = transl(0.3, 0.16, 1.5);
             T3 = transl(0.2, 0.25, 1.6);  % Example additional transformation
+            T4 = transl(0.25, 0.16, 1.4)
 
             % Automatically collect all variables starting with 'T' that are transformations
             T_variables = who('T*');
