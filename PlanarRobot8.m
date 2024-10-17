@@ -36,7 +36,7 @@ classdef PlanarRobot8 < handle
         text_h = [];
         
         %Base transform
-        base_transform = transl(0, 0, 1.2988)
+        base_transform = transl(1.3, 0.5, 1.2988)
     end
     
     methods
@@ -78,7 +78,7 @@ classdef PlanarRobot8 < handle
             set(table_h, 'Vertices', verts(:, 1:3));
 
             % Place Balls
-            Golfball_h = PlaceObject("golfball_lowpoly.ply", [0, 1.3, 0.35]); %#ok<NASGU>
+            Golfball_h = PlaceObject("golfball.ply", [0, 1.3, 0.35]); %#ok<NASGU>
             
             % Conditionally place safety features if safety is enabled
             if self.safety
@@ -106,9 +106,9 @@ classdef PlanarRobot8 < handle
             
             
             % Initialize the UR3e robot
-            self.r = LinearUR3e;
+            self.r = LinearDobot4;  % Assuming LinearDobot4 is your class for LinearDobot
             self.r.model.base = self.base_transform * trotx(pi/2) * troty(pi/2);
-            self.r.model.animate([0 0 0 0 0 0 0]);
+            self.r.model.animate([0 0 0 0 0 0]);
             
             axis([-4 2 -2 2 0 2])
             
@@ -166,95 +166,79 @@ classdef PlanarRobot8 < handle
         
         
         function animateRobot(self)
-            T1 = transl(0.3, 0.16, 1.4);
-            T2 = transl(0.3, 0.16, 1.5);
-            T3 = transl(0.2, 0.25, 1.6);  % Example additional transformation
-            T4 = transl(0.25, 0.16, 1.4)
+            % Define transformation matrices (example transformations)
+            T1 = transl(-1, 0.5, 1.2);
+            T2 = transl(1.3, 0.5, 1.75);
+            T3 = transl(-1, 0.5, 1.2);
+            T4 = transl(1.3, 0.5, 1.75);
 
-            % Automatically collect all variables starting with 'T' that are transformations
+            % Collect all transformation matrices starting with 'T' (assuming they are provided)
             T_variables = who('T*');
-
-            % Initialize an empty array to store the transforms
             T_Array = [];
-
-            % Loop through each transformation and concatenate it along the 3rd dimension
+        
             for i = 1:length(T_variables)
                 T_Array = cat(3, T_Array, eval(T_variables{i}));
             end
-            
-            % T1 = transl(0.3,0.16,1.4)
-            % T2 = transl(0.3,0.16,1.5)
-
-
-
-            % %% ADD UR TRANSFORMS IN HERE
-      
-            
-            % T_Array = cat(3, T1, T2)
-            
-            
-            
+        
+            % Iterate over transformation matrices
             for i = 1:size(T_Array, 3)
-                
-                if ~isempty(self.text_h)
-                    delete(self.text_h);
-                end
-                
-                message = num2str(self.r.model.fkine(self.r.model.getpos).T, '%.2f');
-                self.text_h = text(1, 1, 1,  message, 'FontSize', 15, 'Color', [0 0 0]);
-                    
-                % Display the current step in the transformation sequence
+                % Display the transformation number
                 fprintf('On transform step %d of %d\n', i, size(T_Array, 3));
                 
+                % Compute inverse kinematics for the current transformation
+                q = self.r.model.ikcon(T_Array(:,:,i));  % Inverse kinematics for LinearDobot
+                qMatrix = jtraj(self.r.getpos, q, self.traj_steps);
                 
-                % Compute the inverse kinematics for the current transformation
-                q = self.r.model.ikcon(T_Array(:,:,i));
-                qMatrix = jtraj(self.r.model.getpos, q, self.traj_steps);
-                
-                % Animate the robot through the trajectory
+                % Animate the LinearDobot robot through the trajectory
                 for j = 1:self.traj_steps
-                    % Animate the UR3e robot at each step
+                    % Animate the robot at each step
                     self.r.model.animate(qMatrix(j, :));
                     
                     if self.enable_gripper
-                        % Update the planar robot base using forward kinematics
-                        self.finger_1.base = self.r.model.fkineUTS(qMatrix(j,:));
-                        self.finger_2.base = self.r.model.fkineUTS(qMatrix(j,:));
-                        
-                        % Plot the planar robot fingers with current angles
+                        % Plot the planar robot fingers with the current angles
                         self.finger_1.plot(self.finger1_angles, 'nowrist', 'noname', 'noshadow', 'nobase');
                         self.finger_2.plot(self.finger2_angles, 'nowrist', 'noname', 'noshadow', 'nobase');
                     end
                     
-                    
-                    
-                    % Set fixed axis limits for the plot
+                    % Update the plot with fixed axis limits
                     axis([-2 2 -2 2 0 2]);
                     drawnow;
                 end
                 
-                % Control gripper opening and closing based on step index
+                % Open and close the gripper at specific steps
                 if self.enable_gripper
                     if mod(i, 4) == 0
-                        % Open the gripper every 4 steps
                         disp("Opening gripper");
                         self.openGripper();
                     end
-                    
                     if mod(i - 2, 4) == 0
-                        % Close the gripper every 4 steps, offset by 2 steps
                         disp("Closing gripper");
                         self.closeGripper();
                     end
                 end
-                
-                % Check and display the discrepancy between planned and actual end-effector positions
-                currentTransformEndEffector = self.r.model.fkine(self.r.model.getpos).T;
-                realEndEffectorCoords = currentTransformEndEffector(1:3,4);
-                plannedEndEffectorCoords = T_Array(1:3,4,i);
-                fprintf('IK Discrepancy (m) = %.6f\n\n', norm(realEndEffectorCoords - plannedEndEffectorCoords));
-            end
+        
+                % Use forward kinematics to get the end-effector pose
+                q = self.r.getpos();  % Get joint positions, assumed to be in 1x6 format
+                T = self.r.model.fkine(q');  % Transpose q to convert it to 6x1
+                disp('Forward kinematics result:');
+                disp(T);  % Should now return a 4x4 transformation matrix
 
+                % Check size of the transformation matrix
+                [m, n] = size(T);
+                if m == 4 && n == 4
+                    realEndEffectorCoords = T(1:3, 4);  % Extract the position of the end-effector (first 3 elements of last column)
+                else
+                    error('Unexpected size of transformation matrix T. Expected 4x4, got %dx%d', m, n);
+                end
+
+                % Retrieve the planned end-effector position from T_Array
+                plannedEndEffectorCoords = T_Array(1:3, 4, i);  % Assuming T_Array is defined elsewhere
+
+                % Calculate and display the discrepancy between the real and planned end-effector coordinates
+                fprintf('IK Discrepancy (m) = %.6f\n\n', norm(realEndEffectorCoords - plannedEndEffectorCoords));
+
+            end
         end
+        
     end
 end
