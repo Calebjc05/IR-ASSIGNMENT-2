@@ -31,6 +31,22 @@ classdef PlanarRobot8 < handle
         waypoint_A = transl(0.3,0,1.6) * trotx(pi); %used for close side to get in wall placement pos
         % waypoint_B = transl(0,0.45,1.7) * trotx(pi) * troty(pi/2); % Target waypoint
         waypoint_C = transl(0.3,-0.3,1.6) * trotx(pi); % used for far side to get in wall placement pos
+
+        % Alley Properties
+        alley_length = 10; % meters
+        alley_width = 2; % meters
+        
+        % Hardcoded hole positions
+        holes = [2, 1; 5, 1; 8, 1]; % (x, y) positions of holes
+
+        % Marble position
+        marble_pos = [0, 1]; % Starting position (x, y)
+
+        % Define marble's path (for now assume it moves in a straight line)
+        % marble_path = linspace(0, alley_length, 100);
+
+        % Radius of detection for holes
+        hole_radius = 0.1; % meters
         
         %Text handle for transforms
         text_h = [];
@@ -76,6 +92,10 @@ classdef PlanarRobot8 < handle
             table_h = PlaceObject("mytable1.ply", [self.table_x_axis_offset 0 0]);
             verts = [get(table_h, 'Vertices'), ones(size(get(table_h, 'Vertices'), 1), 1)] * trotz(pi/2);
             set(table_h, 'Vertices', verts(:, 1:3));
+
+            % Place alley
+            % alley_h = PlaceObject("alley.ply", [0 self.table_height 0]);
+
             
             % Conditionally place safety features if safety is enabled
             if self.safety
@@ -102,11 +122,13 @@ classdef PlanarRobot8 < handle
             
             
             % Initialize the UR3e robot
-            self.r = LinearUR3e;
+            self.r = LinearDobot4;
             self.r.model.base = self.base_transform * trotx(pi/2) * troty(pi/2);
-            self.r.model.animate([0 0 0 0 0 0 0]);
+            % self.r.model.base = self.base_transform
+            self.r.model.animate([0 0 0 0 0 0]);
             
             axis([-4 2 -2 2 0 2])
+            % axis([-100 100 -100 100 -100 100])
             
         end
         
@@ -159,34 +181,51 @@ classdef PlanarRobot8 < handle
             self.finger1_angles = close_angles_finger1;
             self.finger2_angles = close_angles_finger2;
         end
+
+        function animateMarble(self)
+        % Loop over the path
+        for i = 1:length(self.marble_path)
+            % Update marble position
+            self.marble_pos(1) = self.marble_path(i); % Assume it moves along x-axis
+            
+            % Check if marble is near any hole
+            for j = 1:size(self.holes, 1)
+                distance_to_hole = norm(self.marble_pos - self.holes(j, :));
+                if distance_to_hole <= self.hole_radius
+                    fprintf('Marble fell into hole %d at position (%.2f, %.2f)\n', j, self.holes(j, :));
+
+                    % Teleport marble to bottom of the hole (e.g., z = -1)
+                    teleport_marble_to_hole(self.holes(j, :));
+                    return; % End simulation once marble falls into a hole
+                end
+            end
+            
+            % Visualize or simulate the marble moving
+            % (Add plotting code if desired)
+        end
+    end
+
+            
+
+ 
+
         
         
         function animateRobot(self)
             T1 = transl(0.3, 0.16, 1.4);
             T2 = transl(0.3, 0.16, 1.5);
             T3 = transl(0.2, 0.25, 1.6);  % Example additional transformation
-
+            
             % Automatically collect all variables starting with 'T' that are transformations
             T_variables = who('T*');
-
+            
             % Initialize an empty array to store the transforms
             T_Array = [];
-
+            
             % Loop through each transformation and concatenate it along the 3rd dimension
             for i = 1:length(T_variables)
                 T_Array = cat(3, T_Array, eval(T_variables{i}));
             end
-            
-            % T1 = transl(0.3,0.16,1.4)
-            % T2 = transl(0.3,0.16,1.5)
-
-
-
-            % %% ADD UR TRANSFORMS IN HERE
-      
-            
-            % T_Array = cat(3, T1, T2)
-            
             
             
             for i = 1:size(T_Array, 3)
@@ -197,7 +236,7 @@ classdef PlanarRobot8 < handle
                 
                 message = num2str(self.r.model.fkine(self.r.model.getpos).T, '%.2f');
                 self.text_h = text(1, 1, 1,  message, 'FontSize', 15, 'Color', [0 0 0]);
-                    
+                
                 % Display the current step in the transformation sequence
                 fprintf('On transform step %d of %d\n', i, size(T_Array, 3));
                 
@@ -225,22 +264,8 @@ classdef PlanarRobot8 < handle
                     
                     % Set fixed axis limits for the plot
                     axis([-2 2 -2 2 0 2]);
+                    % axis([-20 20 -20 20 0 20]);
                     drawnow;
-                end
-                
-                % Control gripper opening and closing based on step index
-                if self.enable_gripper
-                    if mod(i, 4) == 0
-                        % Open the gripper every 4 steps
-                        disp("Opening gripper");
-                        self.openGripper();
-                    end
-                    
-                    if mod(i - 2, 4) == 0
-                        % Close the gripper every 4 steps, offset by 2 steps
-                        disp("Closing gripper");
-                        self.closeGripper();
-                    end
                 end
                 
                 % Check and display the discrepancy between planned and actual end-effector positions
@@ -249,7 +274,7 @@ classdef PlanarRobot8 < handle
                 plannedEndEffectorCoords = T_Array(1:3,4,i);
                 fprintf('IK Discrepancy (m) = %.6f\n\n', norm(realEndEffectorCoords - plannedEndEffectorCoords));
             end
-
+            
         end
     end
 end
