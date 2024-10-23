@@ -17,6 +17,7 @@ classdef PlanarRobot8 < handle
         finger_1;         % Planar 2-link robot (finger 1)
         finger_2;         % Planar 2-link robot (finger 2)
         r;               % Linear UR3e robot
+        f;                  %Franka Robot
         
         traj_steps = 100;     % Number of steps in the trajectory
         gripper_steps = 50;   % Number of steps for gripper animation
@@ -39,11 +40,11 @@ classdef PlanarRobot8 < handle
         % Hardcoded hole positions
         holes = [2, 1; 5, 1; 8, 1]; % (x, y) positions of holes
 
-        % Marble position
-        marble_pos = [0, 1]; % Starting position (x, y)
+        % % Marble position
+        % marble_pos = [0, 1, 1]; % Starting position (x, y, z)
 
-        % Define marble's path (for now assume it moves in a straight line)
-        % marble_path = linspace(0, alley_length, 100);
+        % % Define marble's path (for now assume it moves in a straight line)
+        % marble_path = linspace(0, 1, 100)
 
         % Radius of detection for holes
         hole_radius = 0.1; % meters
@@ -52,11 +53,12 @@ classdef PlanarRobot8 < handle
         text_h = [];
         
         %Base transform
-        base_transform = transl(0, 0, 1.2988)
+        base_transform = transl(-0.38, 0.6, 1.2988)
     end
     
     methods
         function self = PlanarRobot8()
+            % disp(self.marble_path)
             % Constructor to initialize the robot model
             
             % Create robot gripper fingers if enabled
@@ -94,7 +96,13 @@ classdef PlanarRobot8 < handle
             set(table_h, 'Vertices', verts(:, 1:3));
 
             % Place alley
-            % alley_h = PlaceObject("alley.ply", [0 self.table_height 0]);
+            alley_h = PlaceObject("alley.ply", [0 self.table_height + 0.02 1.3]);
+            verts = [get(alley_h, 'Vertices'), ones(size(get(alley_h, 'Vertices'), 1), 1)] * trotx(-pi/2) * trotz(pi/2);
+            set(alley_h, 'Vertices', verts(:, 1:3));
+
+
+            % Place
+            marble_h = PlaceObject("baby.ply", [ 1 0 self.table_height])
 
             
             % Conditionally place safety features if safety is enabled
@@ -121,13 +129,16 @@ classdef PlanarRobot8 < handle
             end
             
             
+            % Initialize the Franka robot
+            self.f = FrankaER;
+
             % Initialize the UR3e robot
             self.r = LinearDobot4;
             self.r.model.base = self.base_transform * trotx(pi/2) * troty(pi/2);
             % self.r.model.base = self.base_transform
             self.r.model.animate([0 0 0 0 0 0]);
             
-            axis([-4 2 -2 2 0 2])
+            axis([-2 2 -1 1 0 2])
             % axis([-100 100 -100 100 -100 100])
             
         end
@@ -183,14 +194,20 @@ classdef PlanarRobot8 < handle
         end
 
         function animateMarble(self)
+        % Marble position
+        marble_pos = [0, 1, self.table_height]; % Starting position (x, y, z)
+
+        % Define marble's path (for now assume it moves in a straight line)
+        marble_path = linspace(0, 1, 100);
+
         % Loop over the path
-        for i = 1:length(self.marble_path)
+        for i = 1:length(marble_path)
             % Update marble position
-            self.marble_pos(1) = self.marble_path(i); % Assume it moves along x-axis
+            marble_pos(1) = marble_path(i); % Assume it moves along x-axis
             
             % Check if marble is near any hole
             for j = 1:size(self.holes, 1)
-                distance_to_hole = norm(self.marble_pos - self.holes(j, :));
+                distance_to_hole = norm(marble_pos - self.holes(j, :));
                 if distance_to_hole <= self.hole_radius
                     fprintf('Marble fell into hole %d at position (%.2f, %.2f)\n', j, self.holes(j, :));
 
