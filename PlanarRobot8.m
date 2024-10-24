@@ -17,6 +17,11 @@ classdef PlanarRobot8 < handle
         finger_1;         % Planar 2-link robot (finger 1)
         finger_2;         % Planar 2-link robot (finger 2)
         r;               % Linear UR3e robot
+
+        % Ball positions and handles
+        golfball_h; % Handle for brick 1
+        golfball_pos; % Coordinates of brick 1
+        ballAngle;
         
         traj_steps = 100;     % Number of steps in the trajectory
         gripper_steps = 50;   % Number of steps for gripper animation
@@ -37,6 +42,8 @@ classdef PlanarRobot8 < handle
         
         %Base transform
         base_transform = transl(1.3, 0.6, 1.2988)
+        % store vertices for ball
+        original_vertices;
     end
     
     methods
@@ -76,6 +83,7 @@ classdef PlanarRobot8 < handle
             table_h = PlaceObject("mytable1.ply", [self.table_x_axis_offset 0 0]);
             verts = [get(table_h, 'Vertices'), ones(size(get(table_h, 'Vertices'), 1), 1)] * trotz(pi/2);
             set(table_h, 'Vertices', verts(:, 1:3));
+        
             
             % Conditionally place safety features if safety is enabled
             if self.safety
@@ -100,6 +108,13 @@ classdef PlanarRobot8 < handle
                 
             end
             
+            % Golf ball prop
+            self.golfball_pos = [1.2 0.2 (self.table_height+0.05)];
+            self.golfball_h = PlaceObject('golfball.ply', self.golfball_pos);
+            self.original_vertices = get(self.golfball_h, 'Vertices')
+
+            
+
             
             % Initialize the UR3e robot
             self.r = LinearDobot5;
@@ -162,72 +177,64 @@ classdef PlanarRobot8 < handle
         
         
         function animateRobot(self)
-            T1 = transl(-1, 1, 1.4);
-            T2 = transl(0.9, 0.25, 1.5);
-            T3 = transl(-1, 1, 1.6);  % Example additional transformation
-
+            T1 = transl(self.golfball_pos) * transl(0, 0, self.finger1_link1) * trotx(pi);
+            T2 = transl(-0.75, 0, 2);  % Example additional transformation
+        
             % Automatically collect all variables starting with 'T' that are transformations
             T_variables = who('T*');
-
+        
             % Initialize an empty array to store the transforms
             T_Array = [];
-
+        
             % Loop through each transformation and concatenate it along the 3rd dimension
             for i = 1:length(T_variables)
                 T_Array = cat(3, T_Array, eval(T_variables{i}));
             end
-            
-            % T1 = transl(0.3,0.16,1.4)
-            % T2 = transl(0.3,0.16,1.5)
-
-
-
-            % %% ADD UR TRANSFORMS IN HERE
-      
-            
-            % T_Array = cat(3, T1, T2)
-            
-            
-            
+        
+            % Get the original golf ball vertices in homogeneous coordinates
+            originalGolfBallVertices = [get(self.golfball_h, 'Vertices'), ones(size(get(self.golfball_h, 'Vertices'), 1), 1)];
+        
+            % Iterate over each transformation in the array
             for i = 1:size(T_Array, 3)
-                
                 if ~isempty(self.text_h)
                     delete(self.text_h);
                 end
-                
+        
                 message = num2str(self.r.model.fkine(self.r.model.getpos).T, '%.2f');
-                self.text_h = text(1, 1, 1,  message, 'FontSize', 15, 'Color', [0 0 0]);
-                    
+                self.text_h = text(1, 1, 1, message, 'FontSize', 15, 'Color', [0 0 0]);
+        
                 % Display the current step in the transformation sequence
                 fprintf('On transform step %d of %d\n', i, size(T_Array, 3));
-                
-                
+        
                 % Compute the inverse kinematics for the current transformation
                 q = self.r.model.ikcon(T_Array(:,:,i));
                 qMatrix = jtraj(self.r.model.getpos, q, self.traj_steps);
-                
+        
                 % Animate the robot through the trajectory
                 for j = 1:self.traj_steps
                     % Animate the UR3e robot at each step
                     self.r.model.animate(qMatrix(j, :));
-                    
-                    if self.enable_gripper
-                        % Update the planar robot base using forward kinematics
-                        self.finger_1.base = self.r.model.fkineUTS(qMatrix(j,:));
-                        self.finger_2.base = self.r.model.fkineUTS(qMatrix(j,:));
-                        
-                        % Plot the planar robot fingers with current angles
-                        self.finger_1.plot(self.finger1_angles, 'nowrist', 'noname', 'noshadow', 'nobase');
-                        self.finger_2.plot(self.finger2_angles, 'nowrist', 'noname', 'noshadow', 'nobase');
+        
+                    % Only update the golf ball at the last step of each transformation
+                    if j == self.traj_steps
+                        eePos = self.r.model.fkine(self.r.model.getpos).T;  % Get the end-effector's current pose
+        
+                        % Transform the golf ball vertices based on the final end-effector pose
+                        transformedVertices = (eePos * originalGolfBallVertices')';  % Apply the transformation once at the end
+        
+                        % DEBUG: Print the transformed golf ball vertices to check correctness
+                        disp('Transformed Golf Ball Vertices:');
+                        disp(transformedVertices(:, 1:3));
+        
+                        % Update the golf ball's position with the transformed vertices
+                        set(self.golfball_h, 'Vertices', transformedVertices(:, 1:3));  % Update the golf ball position
                     end
-                    
-                    
-                    
+        
                     % Set fixed axis limits for the plot
                     axis([-2 2 -2 2 0 2]);
                     drawnow;
                 end
-                
+        
                 % Control gripper opening and closing based on step index
                 if self.enable_gripper
                     if mod(i, 4) == 0
@@ -235,21 +242,23 @@ classdef PlanarRobot8 < handle
                         disp("Opening gripper");
                         self.openGripper();
                     end
-                    
+        
                     if mod(i - 2, 4) == 0
                         % Close the gripper every 4 steps, offset by 2 steps
                         disp("Closing gripper");
                         self.closeGripper();
                     end
                 end
-                
+        
                 % Check and display the discrepancy between planned and actual end-effector positions
                 currentTransformEndEffector = self.r.model.fkine(self.r.model.getpos).T;
                 realEndEffectorCoords = currentTransformEndEffector(1:3,4);
                 plannedEndEffectorCoords = T_Array(1:3,4,i);
                 fprintf('IK Discrepancy (m) = %.6f\n\n', norm(realEndEffectorCoords - plannedEndEffectorCoords));
             end
-
         end
+        
+        
+        
     end
 end
