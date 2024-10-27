@@ -142,7 +142,7 @@ classdef MarbleGolf< handle
             % Initialize the UR3e robot
             self.r = LinearDobot5;
             self.r.model.base = self.base_transform * trotx(pi/2) * troty(pi/2);
-            self.r.model.animate([0 0 0 0 0 0 0]);
+            self.r.model.animate([0 0 0 0 0 0]);
  
             PlaceObject("golfball.ply", [0 0 0])
  
