@@ -50,6 +50,10 @@ classdef MarbleGolf< handle
  
         %Base transform
         base_transform = transl(-0.285, 0.34, 1.2988)
+
+        % Arduino Variables
+        %a = arduino("COM3", "UNO");
+
     end
     
     methods
@@ -355,7 +359,25 @@ classdef MarbleGolf< handle
                 plannedEndEffectorCoords = T_Array(1:3,4,i);
                 fprintf('IK Discrepancy (m) = %.6f\n\n', norm(realEndEffectorCoords - plannedEndEffectorCoords));
             end
-             
        end
+
+       function obj = YourClassName()
+        % Constructor where you initialize the properties
+        obj.a = arduino("COM3", "UNO");
+        
+        obj.buttonTimer = timer;
+        obj.buttonTimer.ExecutionMode = "fixedRate";
+        obj.buttonTimer.Period = 0.1;
+        obj.buttonTimer.TimerFcn = @(~,~) eStopCheck([], [], obj.a);
+        
+        start(obj.buttonTimer);
+        end
+
+       function eStopCheck(~, ~, a)
+            buttonState = readDigitalPin(a, "D7")
+            if buttonState == 1
+                disp('eStop Pressed');
+            end
+        end
    end
 end

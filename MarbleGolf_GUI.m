@@ -14,7 +14,6 @@ function MarbleGolf_GUI
     % Add components (buttons, sliders, etc.)
     uicontrol('Style', 'text', 'Position', [50, 450, 300, 30], 'String', 'PlanarRobot8 Controller', 'FontSize', 12);
 
-    % Other UI components
     % Button to initialize the robot
     uicontrol('Style', 'pushbutton', 'Position', [50, 400, 100, 30], ...
               'String', 'Initialize Robot', ...
@@ -37,9 +36,27 @@ function MarbleGolf_GUI
 
     % Callback functions
     function initializeRobot(~, ~)
-        r = MarbleGolf(); % Assuming it initializes when called directly
-        setappdata(hFig, 'RobotInstance', r);
-        disp('Robot initialized');
+        userResponse = questdlg('Is the Emergency Stop connected?', ...
+                                 'Arduino Connection', ...
+                                 'Yes', 'No', 'Yes');
+        if strcmp(userResponse, 'Yes')
+            % Check for available serial devices
+            availableDevices = instrhwinfo('serial');
+            if any(contains(availableDevices.Port, 'Arduino'))
+                r = MarbleGolf(); % Assuming it initializes the robot and the Arduino
+                setappdata(hFig, 'RobotInstance', r);
+                disp('Robot initialized with Arduino.');
+            else
+                errordlg('No Arduino device found on the specified port. Please check the connection.', ...
+                         'Connection Error');
+            end
+        else
+            r = MarbleGolf(); % Initialize the robot without Arduino
+            setappdata(hFig, 'RobotInstance', r);
+            disp('Robot initialized without Estop.');
+            msgbox('Be careful! No eStop Avaliable.', ...
+                'Warning', 'warn');
+        end
     end
 
     function setJointAngle(joint, angle)
@@ -58,7 +75,7 @@ function MarbleGolf_GUI
             disp('Robot not initialized!');
             return;
         end
-        r.animateRobot;
+        r.animateRobot; % Call animate function
         % Example: r.moveRobot(); % Call specific function here
         disp('Running function in PlanarRobot8');
     end
