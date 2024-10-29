@@ -23,7 +23,7 @@ classdef MarbleGolf< handle
         gripper_steps = 50;   % Number of steps for gripper animation
  
         % Safety variable
-        safety = false;   % Toggle for enabling safety features
+        safety = true;   % Toggle for enabling safety features
  
         % Enable/Disable Gripperß
         enable_gripper = false; % Toggle for enabling the gripper
@@ -51,13 +51,13 @@ classdef MarbleGolf< handle
  
         %Base transform Dobot
         dobot_base_transform = transl(-0.285, 0.34, 1.2988)
-
+ 
         %Base transform Franka
         franka_base_transform = transl(0, -0.15, 1.2988)
-
+ 
         % Arduino Variables
         %a = arduino("COM3", "UNO");
-
+ 
         %hole variables
         holes = [-0.5,-0.25,1.3788;
         -0.4,-0.12,1.3788;
@@ -66,7 +66,7 @@ classdef MarbleGolf< handle
         -0.26, -0.17,1.3788
         ]
         hole_radius = 0.1
-
+ 
     end
     
     methods
@@ -106,7 +106,7 @@ classdef MarbleGolf< handle
             table_h = PlaceObject("mytable1.ply", [self.table_x_axis_offset 0 0]);
             verts = [get(table_h, 'Vertices'), ones(size(get(table_h, 'Vertices'), 1), 1)] * trotz(pi/2);
             set(table_h, 'Vertices', verts(:, 1:3));
-
+ 
             % Place alley
             alley_h = PlaceObject("alley.ply", [0 self.table_height + 0.02 1.2]);
             verts = [get(alley_h, 'Vertices'), ones(size(get(alley_h, 'Vertices'), 1), 1)] * trotx(-pi/2) * trotz(pi/2);
@@ -115,17 +115,17 @@ classdef MarbleGolf< handle
             % Conditionally place safety features if safety is enabled
             if self.safety
                 % Place barriers
-                barrier1_h = PlaceObject("mybarrier1.ply", [-2, 0, 0.35]); %#ok<NASGU>
+                % barrier1_h = PlaceObject("mybarrier1.ply", [-2, 0, 0.35]); %#ok<NASGU>
                 barrier2_h = PlaceObject("mybarrier1.ply", [2, 0, 0.35]); %#ok<NASGU>
-                barrier3_h = PlaceObject('mybarrier1.ply', [2, 0, 0.35]);
+                barrier3_h = PlaceObject('mybarrier1.ply', [1, 0, 0.35]);
                 verts = [get(barrier3_h, 'Vertices'), ones(size(get(barrier3_h, 'Vertices'), 1), 1)] * trotz(0.5 * pi);
                 set(barrier3_h, 'Vertices', verts(:, 1:3));
-                barrier4_h = PlaceObject('mybarrier1.ply', [-2, 0, 0.35]);
+                barrier4_h = PlaceObject('mybarrier1.ply', [-1, 0, 0.35]);
                 verts = [get(barrier4_h, 'Vertices'), ones(size(get(barrier4_h, 'Vertices'), 1), 1)] * trotz(pi/2);
                 set(barrier4_h, 'Vertices', verts(:, 1:3));
                 
                 % Place emergency stop button
-                emergencystop_h = PlaceObject("emergencyStopButton.ply", [-3 0 0]); %#ok<NASGU>
+                emergencystop_h = PlaceObject("emergencyStopButton.ply", [-1.1 -0.7 self.table_height]); %#ok<NASGU>
  
                 % Place man
                 man_h = PlaceObject("personMaleConstruction.ply", [-3.5 0 0.01]); %#ok<NASGU>
@@ -137,7 +137,7 @@ classdef MarbleGolf< handle
             
             % Define positions for golfball
             self.golfball_1_pos = [-1.2 -0.2 (self.table_height+0.06+0.02)];
-
+ 
             
  
             % Concatenate golfball positions to form a 3D array
@@ -168,6 +168,7 @@ classdef MarbleGolf< handle
  
             % PlaceObject("golfball.ply", [0 0 0])
  
+            % axis([-2 2 -2 2 0 3])
             axis([-2 2 -2 2 0 3])
  
         end
@@ -258,15 +259,14 @@ classdef MarbleGolf< handle
                 end
             end
         end
-
+ 
         function playGame(self)
             figure(2);
-
             self.animateMarble()
             self.animateFranka()
             self.animateDobot()
         end
-
+ 
         function animateMarble(self)
             figure(2);
             % Marble position
@@ -275,8 +275,8 @@ classdef MarbleGolf< handle
             self.golfball_1_pos = [-1.2 ,-0.05 + (-0.33 + 0.05) * rand ,(self.table_height+0.06+0.02)];
             marble_path = linspace(self.golfball_1_pos(1), self.golfball_1_pos(1) + 1.04, 50);
             hole_radius = 0.01;
-
-
+ 
+ 
     
             % Loop over the path
             for i = 1:length(marble_path);
@@ -285,11 +285,11 @@ classdef MarbleGolf< handle
                 self.golfball_1_pos(1) = marble_path(i); % Assume it moves along x-axis
                 % disp(self.golfball_1_pos);
                 self.golfball_1_h = PlaceObject("golfball2.ply", self.golfball_1_pos);
-
+ 
                 % Pause to allow visualization of movement
                 pause(0.01); % Adjust pause duration for desired speed
-
-
+ 
+ 
                 
                 % Check if marble is near any hole
                 for j = 1:size(self.holes, 1)
@@ -303,9 +303,9 @@ classdef MarbleGolf< handle
                         return; % End simulation once marble falls into a hole
                     end
                 end
-
-
-
+ 
+ 
+ 
                 
                 % Visualize or simulate the marble moving
                 % (Add plotting code if desired)
@@ -341,13 +341,13 @@ classdef MarbleGolf< handle
              
         %     % Store the original vertices of a golfball
         %     self.original_vertices = get(self.golfball_1_h, 'Vertices');
-
+ 
             % Define transformations for waypoints and objects
             % Make sure to go to waypoint_# every second step
             T1 = self.waypoint_A;
-
+ 
             % T2 = transl(self.golfball_1_pos) * transl(0, 0, self.finger1_link1) * trotx(pi);
-            T2 = transl(-0.2, 0.2, 1.7) * trotx(pi);
+            T2 = transl(-0.2, 0.2, 1.7) * transl(0, 0.1, 0) * trotx(pi);
             % Transformation for waypoint C
             T3 = self.waypoint_C;
         
@@ -355,8 +355,8 @@ classdef MarbleGolf< handle
             T4 = transl(-1.2, 0.07, 1.3) * trotx(pi);
         
             % Transformation for waypoint A waiting
-            % T5 = self.waypoint_A;
-            T5 = transl(-1.2, 0.3,self.table_height);
+            T5 = self.waypoint_A;
+            % T5 = transl(-1.2, 0.5,self.table_height);
         
             % Concatenate all transformations into a 3D array
             T_Array = cat(3, T1, T2, T3, T4, T5);
@@ -459,7 +459,7 @@ classdef MarbleGolf< handle
                 fprintf('IK Discrepancy (m) = %.6f\n\n', norm(realEndEffectorCoords - plannedEndEffectorCoords));
             end
        end
-
+ 
        function animateFranka(self)
                 % Concatenate golfball positions to form a 3D array
                 self.golfball_positions = cat(3, ...
@@ -476,12 +476,12 @@ classdef MarbleGolf< handle
                      
                     % Store the original vertices of a golfball
                     self.original_vertices = get(self.golfball_1_h, 'Vertices');
-
+ 
             % Define transformations for waypoints and objects
             % Make sure to go to waypoint_# every second step
-
+ 
             T1 = self.waypoint_A;
-
+ 
             T2 = transl(self.golfball_1_pos) * transl(0, 0, self.finger1_link1) * trotx(pi);
         
             % Transformation for waypoint C
@@ -495,37 +495,37 @@ classdef MarbleGolf< handle
         
             % Concatenate all transformations into a 3D array
             T_Array = cat(3, T1, T2, T3, T4);
-
-
-
+ 
+ 
+ 
             for i = 1:size(T_Array, 3)
-
+ 
                 
-
+ 
                 message = num2str(self.f.model.fkine(self.f.model.getpos).T, '%.2f');
                 %self.text_h = text(1, 1, 1,  message, 'FontSize', 15, 'Color', [0 0 0]);
-
+ 
                 
-
+ 
                 % Display the current step in the transformation sequence
                 fprintf('On transform step %d of %d\n', i, size(T_Array, 3));
-
+ 
                 %Logging robot task (moving to waypoint)
                 if mod(i, 2) ~= 0
                     disp("Step Objective: Moving to Waypoint")
                 end
-
+ 
                 %Logging robot task (placing golfball in wall)
                 if mod(i, 4) == 0
                     disp("Step Objective: Deploying golfball in wall strucuture")
                 end
-
+ 
                 %Logging robot task (Locating golfball)
                 if mod(i-2, 4) == 0
                     disp("Step Objective: Locating golfball")
                 end
-
-
+ 
+ 
                 % Compute the inverse kinematics for the current transformation
                 q = self.f.model.ikcon(T_Array(:,:,i));
                 qMatrix = jtraj(self.f.model.getpos, q, self.traj_steps);
@@ -594,7 +594,7 @@ classdef MarbleGolf< handle
                 fprintf('IK Discrepancy (m) = %.6f\n\n', norm(realEndEffectorCoords - plannedEndEffectorCoords));
             end
         end
-
+ 
        function obj = YourClassName()
             % Constructor where you initialize the properties
             obj.a = arduino("COM3", "UNO");
@@ -606,14 +606,14 @@ classdef MarbleGolf< handle
             
             start(obj.buttonTimer);
         end
-
+ 
        function eStopCheck(~, ~, a)
             buttonState = readDigitalPin(a, "D7")
             if buttonState == 1
                 disp('eStop Pressed');
             end
         end
-
+ 
         function obj = timer()
             % Constructor where you initialize the properties
             obj.a = arduino("COM3", "UNO");
@@ -625,7 +625,7 @@ classdef MarbleGolf< handle
             
             start(obj.buttonTimer);
         end
-
+ 
             % In MarbleGolf.m
         function newPosition = moveEndEffector(obj, deltaX, deltaY, deltaZ)
             % Apply translational offset using transl
