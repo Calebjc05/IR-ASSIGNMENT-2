@@ -148,7 +148,7 @@ classdef MarbleGolf< handle
             self.r.model.base = self.base_transform * trotx(pi/2) * troty(pi/2);
             self.r.model.animate([0 0 0 0 0 0]);
  
-            PlaceObject("golfball.ply", [0 0 0])
+            % PlaceObject("golfball.ply", [0 0 0])
  
             axis([-4 2 -2 2 0 2])
  
