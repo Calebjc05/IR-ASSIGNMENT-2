@@ -429,21 +429,51 @@ classdef MarbleGolf< handle
        end
 
        function obj = YourClassName()
-        % Constructor where you initialize the properties
-        obj.a = arduino("COM3", "UNO");
-        
-        obj.buttonTimer = timer;
-        obj.buttonTimer.ExecutionMode = "fixedRate";
-        obj.buttonTimer.Period = 0.1;
-        obj.buttonTimer.TimerFcn = @(~,~) eStopCheck([], [], obj.a);
-        
-        start(obj.buttonTimer);
+            % Constructor where you initialize the properties
+            obj.a = arduino("COM3", "UNO");
+            
+            obj.buttonTimer = timer;
+            obj.buttonTimer.ExecutionMode = "fixedRate";
+            obj.buttonTimer.Period = 0.1;
+            obj.buttonTimer.TimerFcn = @(~,~) eStopCheck([], [], obj.a);
+            
+            start(obj.buttonTimer);
         end
 
        function eStopCheck(~, ~, a)
             buttonState = readDigitalPin(a, "D7")
             if buttonState == 1
                 disp('eStop Pressed');
+            end
+        end
+
+        function obj = timer()
+            % Constructor where you initialize the properties
+            obj.a = arduino("COM3", "UNO");
+            
+            obj.buttonTimer = timer;
+            obj.buttonTimer.ExecutionMode = "fixedRate";
+            obj.buttonTimer.Period = 0.1;
+            obj.buttonTimer.TimerFcn = @(~,~) eStopCheck([], [], obj.a);
+            
+            start(obj.buttonTimer);
+        end
+        
+            % In MarbleGolf.m
+        function newPosition = moveEndEffector(obj, deltaX, deltaY, deltaZ)
+            % Apply translational offset using transl
+            translationMatrix = transl(deltaX, deltaY, deltaZ);
+            obj.currentTransform = obj.currentTransform * translationMatrix;
+            
+            % Extract the new position
+            newPosition = transl(obj.currentTransform);
+    
+            % Update the robot model plot to reflect the new position
+            if ishandle(obj.plotHandle)
+                obj.plot(obj.currentTransform); % Re-plot with the new transformation
+            else
+                % If no existing plot, create one
+                obj.plotHandle = plot(obj.robot, obj.currentTransform);
             end
         end
    end
