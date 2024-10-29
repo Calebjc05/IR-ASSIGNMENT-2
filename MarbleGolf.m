@@ -43,7 +43,7 @@ classdef MarbleGolf< handle
  
         % Waypoints for robot movement
         waypoint_A = transl(-0.2,0.4,2) * trotx(pi); %used for close side to get in wall placement pos
-        % waypoint_B = transl(0,0.45,1.7) * trotx(pi) * troty(pi/2); % Target waypoint
+        waypoint_B = transl(-0.3,0.2,1.5) * trotx(pi) * troty(pi/2); % Target waypoint
         waypoint_C = transl(-0.6,0.4,2) * trotx(pi); % used for far side to get in wall placement pos
  
         %Text handle for transforms
@@ -296,21 +296,21 @@ classdef MarbleGolf< handle
                 % Visualize or simulate the marble moving
                 % (Add plotting code if desired)
             end
-                desired_pos = transl(self.golfball_1_pos(1), self.golfball_1_pos(2), self.golfball_1_pos(3)) * trotx(pi);
-                q = self.f.model.ikcon(desired_pos)
+                %desired_pos = transl(self.golfball_1_pos(1), self.golfball_1_pos(2), self.golfball_1_pos(3)) * trotx(pi);
+                %q = self.f.model.ikcon(desired_pos)
             
-                qMatrix = jtraj(self.f.model.getpos, q, self.traj_steps);
+                %qMatrix = jtraj(self.f.model.getpos, q, self.traj_steps);
             
-                for j = 1:self.traj_steps
+                %for j = 1:self.traj_steps
                     % Animate the UR3e robot at each step
-                    self.f.model.animate(qMatrix(j, :));
-                    drawnow;
-                end
+                    %self.f.model.animate(qMatrix(j, :));
+                    %drawnow;
+                %end
         end
  
  
  
-       function animateRobot(self)
+       function animateDobot(self)
             % Define transformations for waypoints and objects
             % Make sure to go to waypoint_# every second step
             T1 = self.waypoint_A;
@@ -427,6 +427,120 @@ classdef MarbleGolf< handle
                 fprintf('IK Discrepancy (m) = %.6f\n\n', norm(realEndEffectorCoords - plannedEndEffectorCoords));
             end
        end
+
+       function animateFranka(self)
+            self.golfball_1_h = PlaceObject('golfball2.ply', self.golfball_1_pos);
+            % Define transformations for waypoints and objects
+            % Make sure to go to waypoint_# every second step
+            T1 = transl(self.golfball_1_pos(1), self.golfball_1_pos(2), self.golfball_1_pos(3)) * trotx(pi);
+
+            T2 = self.waypoint_B;
+        
+            % Transformation for wall 1 position
+            T3 = transl(-1.2, 0.07, 1.3) * trotx(pi);
+        
+        
+            % Concatenate all transformations into a 3D array
+            T_Array = cat(3, T1, T2, T3);
+
+
+
+            for i = 1:size(T_Array, 3)
+
+                
+
+                message = num2str(self.f.model.fkine(self.f.model.getpos).T, '%.2f');
+                %self.text_h = text(1, 1, 1,  message, 'FontSize', 15, 'Color', [0 0 0]);
+
+                
+
+                % Display the current step in the transformation sequence
+                fprintf('On transform step %d of %d\n', i, size(T_Array, 3));
+
+                %Logging robot task (moving to waypoint)
+                if mod(i, 2) ~= 0
+                    disp("Step Objective: Moving to Waypoint")
+                end
+
+                %Logging robot task (placing golfball in wall)
+                if mod(i, 4) == 0
+                    disp("Step Objective: Deploying golfball in wall strucuture")
+                end
+
+                %Logging robot task (Locating golfball)
+                if mod(i-2, 4) == 0
+                    disp("Step Objective: Locating golfball")
+                end
+
+
+                % Compute the inverse kinematics for the current transformation
+                q = self.f.model.ikcon(T_Array(:,:,i));
+                qMatrix = jtraj(self.f.model.getpos, q, self.traj_steps);
+            
+                % Animate the robot through the trajectory
+                for j = 1:self.traj_steps
+                    % Animate the UR3e robot at each step
+                    self.f.model.animate(qMatrix(j, :));
+            
+                    if self.enable_gripper
+                        % Update the planar robot base using forward kinematics
+                        self.finger_1.base = self.f.model.fkineUTS(qMatrix(j,:));
+                        self.finger_2.base = self.f.model.fkineUTS(qMatrix(j,:));
+            
+                        % Plot the planar robot fingers with current angles
+                        self.finger_1.plot(self.finger1_angles, 'nowrist', 'noname', 'noshadow', 'nobase');
+                        self.finger_2.plot(self.finger2_angles, 'nowrist', 'noname', 'noshadow', 'nobase');
+                    end
+            
+                    % Update the golfball's position every 4 steps
+                    if mod(i, 4) == 3 || mod(i, 4) == 0
+                        % Determine the correct golfball handle based on the index
+                        golfball_index = ceil(i / 4);
+            
+                        % Get the end-effector pose of the UR3e
+                        end_effector_pose = self.f.model.fkine(self.f.model.getpos).T;
+            
+                        % Reset the golfball's vertices to their original positions
+                        set(self.golfball_handles(golfball_index), 'Vertices', self.original_vertices);
+            
+                        % Get the current vertices of the golfball
+                        vertices = get(self.golfball_handles(golfball_index), 'Vertices');
+                        golfballVerticesHom = [vertices, ones(size(vertices,1),1)];
+            
+                        % Apply the transformation to each vertex
+                        transformed_vertices = [end_effector_pose * transl(-self.golfball_1_pos(1), -self.golfball_1_pos(2), -self.table_height + self.finger1_link1 - 0.1) * golfballVerticesHom']'; %#ok<NBRAK1>
+            
+                        % Update the golfball's position with the transformed vertices
+                        set(self.golfball_handles(golfball_index), 'Vertices', transformed_vertices(:, 1:3));
+                    end
+            
+                    % Set fixed axis limits for the plot
+                    %axis([-2 2 -2 2 0 2]);
+                    drawnow;
+                end
+            
+                % Control gripper opening and closing based on step index
+                if self.enable_gripper
+                    if mod(i, 4) == 0
+                        % Open the gripper every 4 steps
+                        disp("Opening gripper");
+                        self.openGripper();
+                    end
+            
+                    if mod(i - 2, 4) == 0
+                        % Close the gripper every 4 steps, offset by 2 steps
+                        disp("golfball located: Closing gripper");
+                        self.closeGripper();
+                    end
+                end
+            
+                % Check and display the discrepancy between planned and actual end-effector positions
+                currentTransformEndEffector = self.f.model.fkine(self.f.model.getpos).T;
+                realEndEffectorCoords = currentTransformEndEffector(1:3,4);
+                plannedEndEffectorCoords = T_Array(1:3,4,i);
+                fprintf('IK Discrepancy (m) = %.6f\n\n', norm(realEndEffectorCoords - plannedEndEffectorCoords));
+            end
+        end
 
        function obj = YourClassName()
             % Constructor where you initialize the properties
