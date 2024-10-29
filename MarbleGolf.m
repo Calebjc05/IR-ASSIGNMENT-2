@@ -99,7 +99,7 @@ classdef MarbleGolf< handle
             surf([-4, -4; 4, 4], ...
                  [-4, 4; -4, 4], ...
                  [0.01, 0.01; 0.01, 0.01], ...
-                 'CData', imread('concrete.jpg'), ...
+                 'CData', imread('woodfloor.jpg'), ...
                  'FaceColor', 'texturemap');
  
             % Place the table in the scene
@@ -156,6 +156,7 @@ classdef MarbleGolf< handle
             % Store the original vertices of a golfball
             self.original_vertices = get(self.golfball_1_h, 'Vertices');
  
+            figure(2);
             % Initialize the UR3e robot
             self.r = LinearDobot5;
             self.r.model.base = self.dobot_base_transform * trotx(pi/2) * troty(pi/2);
