@@ -112,6 +112,9 @@ classdef MarbleGolf< handle
             verts = [get(alley_h, 'Vertices'), ones(size(get(alley_h, 'Vertices'), 1), 1)] * trotx(-pi/2) * trotz(pi/2);
             set(alley_h, 'Vertices', verts(:, 1:3));
  
+            Arcade_h = PlaceObject("arcade.ply", [1.2, 1.1 ,0]);
+            Arcade2_h = PlaceObject("arcade.ply", [1.2, -1.75 ,0]);
+
             % Conditionally place safety features if safety is enabled
             if self.safety
                 % Place barriers
