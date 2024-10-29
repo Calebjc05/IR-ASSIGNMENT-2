@@ -59,9 +59,12 @@ classdef MarbleGolf< handle
         %a = arduino("COM3", "UNO");
 
         %hole variables
-        holes = [-0.5,-0.2,1.3788;
-        1,1,1.2988;
-        1,1,1.2988;]
+        holes = [-0.5,-0.25,1.3788;
+        -0.4,-0.12,1.3788;
+        -0.33,-0.24,1.3788;
+        -0.30,-0.05,1.3788;
+        -0.26, -0.17,1.3788
+        ]
         hole_radius = 0.1
 
     end
@@ -260,7 +263,8 @@ classdef MarbleGolf< handle
             % Marble position
             % golfball_1_pos;
             % Define marble's path (for now assume it moves in a straight line)
-            marble_path = linspace(self.golfball_1_pos(1), self.golfball_1_pos(1) + 0.7, 50);
+            self.golfball_1_pos = [-1.2 ,-0.05 + (-0.33 + 0.05) * rand ,(self.table_height+0.06+0.02)];
+            marble_path = linspace(self.golfball_1_pos(1), self.golfball_1_pos(1) + 1.05, 50);
             hole_radius = 0.01;
 
 
@@ -270,7 +274,7 @@ classdef MarbleGolf< handle
                 % Update marble position
                 delete(self.golfball_1_h);
                 self.golfball_1_pos(1) = marble_path(i); % Assume it moves along x-axis
-                disp(self.golfball_1_pos)
+                % disp(self.golfball_1_pos);
                 self.golfball_1_h = PlaceObject("golfball2.ply", self.golfball_1_pos);
 
                 % Pause to allow visualization of movement
@@ -280,17 +284,18 @@ classdef MarbleGolf< handle
                 
                 % Check if marble is near any hole
                 for j = 1:size(self.holes, 1)
-                    distance_to_hole = norm(self.golfball_1_pos - self.holes(j, :))
-                    if distance_to_hole <= hole_radius
-                        fprintf('Marble fell into hole %d at position (%.2f, %.2f)\n', j, self.holes(j, :));
-                        
-                        
-    
+                    distance_to_hole = norm(self.golfball_1_pos - self.holes(j, :));
+                    if distance_to_hole <= 0.05
+                        % fprintf('Marble fell into hole %d at position (%.2f, %.2f)\n', j, self.holes(j, :));
+                        disp('Marble fell into hole! You Scored!');
+                         
                         % Teleport marble to bottom of the hole (e.g., z = -1)
                         % teleport_marble_to_hole(self.holes(j, :));
-                        % return; % End simulation once marble falls into a hole
+                        return; % End simulation once marble falls into a hole
                     end
                 end
+
+
 
                 
                 % Visualize or simulate the marble moving
@@ -311,6 +316,23 @@ classdef MarbleGolf< handle
  
  
        function animateDobot(self)
+     
+        % Concatenate golfball positions to form a 3D array
+        self.golfball_positions = cat(3, ...
+            self.golfball_1_pos);
+    
+            % Place golfballs in the scene
+            % self.golfball_1_h = PlaceObject('golfball2.ply', self.golfball_1_pos);
+            
+    
+            % Store golfball handles in an array
+            self.golfball_handles = [
+            self.golfball_1_h
+            ];
+             
+            % Store the original vertices of a golfball
+            self.original_vertices = get(self.golfball_1_h, 'Vertices');
+
             % Define transformations for waypoints and objects
             % Make sure to go to waypoint_# every second step
             T1 = self.waypoint_A;
@@ -429,19 +451,40 @@ classdef MarbleGolf< handle
        end
 
        function animateFranka(self)
-            self.golfball_1_h = PlaceObject('golfball2.ply', self.golfball_1_pos);
+                % Concatenate golfball positions to form a 3D array
+                self.golfball_positions = cat(3, ...
+                    self.golfball_1_pos);
+            
+                    % Place golfballs in the scene
+                    % self.golfball_1_h = PlaceObject('golfball2.ply', self.golfball_1_pos);
+                    
+            
+                    % Store golfball handles in an array
+                    self.golfball_handles = [
+                    self.golfball_1_h
+                    ];
+                     
+                    % Store the original vertices of a golfball
+                    self.original_vertices = get(self.golfball_1_h, 'Vertices');
+
             % Define transformations for waypoints and objects
             % Make sure to go to waypoint_# every second step
-            T1 = transl(self.golfball_1_pos(1), self.golfball_1_pos(2), self.golfball_1_pos(3)) * trotx(pi);
 
-            T2 = self.waypoint_B;
+            T1 = self.waypoint_A;
+
+            T2 = transl(self.golfball_1_pos) * transl(0, 0, self.finger1_link1) * trotx(pi);
+        
+            % Transformation for waypoint C
+            T3 = self.waypoint_C;
         
             % Transformation for wall 1 position
-            T3 = transl(-1.2, 0.07, 1.3) * trotx(pi);
+            T4 = transl(-0.2, 0.2, 1.7) * trotx(pi);
         
+            % Transformation for waypoint A waiting
+            % T5 = self.waypoint_C;
         
             % Concatenate all transformations into a 3D array
-            T_Array = cat(3, T1, T2, T3);
+            T_Array = cat(3, T1, T2, T3, T4);
 
 
 
@@ -572,7 +615,7 @@ classdef MarbleGolf< handle
             
             start(obj.buttonTimer);
         end
-        
+
             % In MarbleGolf.m
         function newPosition = moveEndEffector(obj, deltaX, deltaY, deltaZ)
             % Apply translational offset using transl
