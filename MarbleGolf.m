@@ -17,6 +17,7 @@ classdef MarbleGolf< handle
         finger_1;         % Planar 2-link robot (finger 1)
         finger_2;         % Planar 2-link robot (finger 2)
         r;               % Linear UR3e robot
+        f; %FrankaER
  
         traj_steps = 100;     % Number of steps in the trajectory
         gripper_steps = 50;   % Number of steps for gripper animation
@@ -48,11 +49,20 @@ classdef MarbleGolf< handle
         %Text handle for transforms
         text_h = [];
  
-        %Base transform
-        base_transform = transl(-0.285, 0.34, 1.2988)
+        %Base transform Dobot
+        dobot_base_transform = transl(-0.285, 0.34, 1.2988)
+
+        %Base transform Franka
+        franka_base_transform = transl(0, -0.15, 1.2988)
 
         % Arduino Variables
         %a = arduino("COM3", "UNO");
+
+        %hole variables
+        holes = [-0.5,-0.2,1.3788;
+        1,1,1.2988;
+        1,1,1.2988;]
+        hole_radius = 0.1
 
     end
     
@@ -122,8 +132,8 @@ classdef MarbleGolf< handle
  
             end
             
-            % Define positions for golfballs
-            self.golfball_1_pos = [0 0.3 (self.table_height+0.05)];
+            % Define positions for golfball
+            self.golfball_1_pos = [-1.2 -0.2 (self.table_height+0.06+0.02)];
 
             
  
@@ -145,12 +155,17 @@ classdef MarbleGolf< handle
  
             % Initialize the UR3e robot
             self.r = LinearDobot5;
-            self.r.model.base = self.base_transform * trotx(pi/2) * troty(pi/2);
+            self.r.model.base = self.dobot_base_transform * trotx(pi/2) * troty(pi/2);
             self.r.model.animate([0 0 0 0 0 0]);
+ 
+            % Initialize the Franka robot
+            self.f = FrankaER;
+            self.f.model.base = self.franka_base_transform;
+            self.f.model.animate([0 0 0 0 0 0 0]);
  
             % PlaceObject("golfball.ply", [0 0 0])
  
-            axis([-4 2 -2 2 0 2])
+            axis([-2 2 -2 2 0 3])
  
         end
  
@@ -239,6 +254,58 @@ classdef MarbleGolf< handle
         
                 end
             end
+        end
+
+        function animateMarble(self)
+            % Marble position
+            % golfball_1_pos;
+            % Define marble's path (for now assume it moves in a straight line)
+            marble_path = linspace(self.golfball_1_pos(1), self.golfball_1_pos(1) + 0.7, 50);
+            hole_radius = 0.01;
+
+
+    
+            % Loop over the path
+            for i = 1:length(marble_path);
+                % Update marble position
+                delete(self.golfball_1_h);
+                self.golfball_1_pos(1) = marble_path(i); % Assume it moves along x-axis
+                disp(self.golfball_1_pos)
+                self.golfball_1_h = PlaceObject("golfball2.ply", self.golfball_1_pos);
+
+                % Pause to allow visualization of movement
+                pause(0.01); % Adjust pause duration for desired speed
+
+
+                
+                % Check if marble is near any hole
+                for j = 1:size(self.holes, 1)
+                    distance_to_hole = norm(self.golfball_1_pos - self.holes(j, :))
+                    if distance_to_hole <= hole_radius
+                        fprintf('Marble fell into hole %d at position (%.2f, %.2f)\n', j, self.holes(j, :));
+                        
+                        
+    
+                        % Teleport marble to bottom of the hole (e.g., z = -1)
+                        % teleport_marble_to_hole(self.holes(j, :));
+                        % return; % End simulation once marble falls into a hole
+                    end
+                end
+
+                
+                % Visualize or simulate the marble moving
+                % (Add plotting code if desired)
+            end
+                desired_pos = transl(self.golfball_1_pos(1), self.golfball_1_pos(2), self.golfball_1_pos(3)) * trotx(pi);
+                q = self.f.model.ikcon(desired_pos)
+            
+                qMatrix = jtraj(self.f.model.getpos, q, self.traj_steps);
+            
+                for j = 1:self.traj_steps
+                    % Animate the UR3e robot at each step
+                    self.f.model.animate(qMatrix(j, :));
+                    drawnow;
+                end
         end
  
  
