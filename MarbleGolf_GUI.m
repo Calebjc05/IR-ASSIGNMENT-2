@@ -35,9 +35,13 @@ classdef MarbleGolf_GUI < handle
                     'Callback', @initializeRobot);
                             
             % Button to execute a function
-            uicontrol('Style', 'pushbutton', 'Position', [100, 350, 100, 30], ...
+            uicontrol('Style', 'pushbutton', 'Position', [100, 300, 100, 30], ...
                     'String', 'Retrieve Ball', ...
                     'Callback', @Retrieve);
+
+            uicontrol('Style', 'pushbutton', 'Position', [100, 350, 100, 30], ...
+                   'String', 'Roll Ball', ...
+                    'Callback', @MarbleRoll);
  
             % Button to initialize the robot
             uicontrol('Style', 'pushbutton', 'Position', [250, 350, 100, 30], ...
@@ -120,10 +124,20 @@ classdef MarbleGolf_GUI < handle
                     disp('Robot not initialized!');
                     return;
                 end
-                r.animateDobot; % Call animate function (change this)
+                r.playGame(); % Call animate function (change this)
                 disp('Running function in PlanarRobot8');
             end
- 
+
+            function MarbleRoll(~, ~)
+                r = getappdata(hFig, 'RobotInstance');
+                if isempty(r)
+                    disp('Robot not initialized!');
+                    return;
+                end
+                r.animateMarble(); % Call animate function (change this)
+                disp('Running function in PlanarRobot8');
+            end
+
             function togglePause()
                 eStopGui;
             end

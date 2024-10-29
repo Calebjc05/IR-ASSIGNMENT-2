@@ -260,12 +260,15 @@ classdef MarbleGolf< handle
         end
 
         function playGame(self)
+            figure(2);
+
             self.animateMarble()
             self.animateFranka()
             self.animateDobot()
         end
 
         function animateMarble(self)
+            figure(2);
             % Marble position
             % golfball_1_pos;
             % Define marble's path (for now assume it moves in a straight line)
