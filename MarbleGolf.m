@@ -23,7 +23,7 @@ classdef MarbleGolf< handle
         gripper_steps = 50;   % Number of steps for gripper animation
  
         % Safety variable
-        safety = false;   % Toggle for enabling safety features
+        safety = true;   % Toggle for enabling safety features
  
         % Enable/Disable Gripperß
         enable_gripper = false; % Toggle for enabling the gripper
@@ -50,7 +50,7 @@ classdef MarbleGolf< handle
         text_h = [];
  
         %Base transform Dobot
-        dobot_base_transform = transl(0, -0.2, 1.2988)
+        dobot_base_transform = transl(-0.285, 0.34, 1.2988)
  
         %Base transform Franka
         franka_base_transform = transl(0, -0.15, 1.2988)
@@ -157,14 +157,14 @@ classdef MarbleGolf< handle
             self.original_vertices = get(self.golfball_1_h, 'Vertices');
  
             % Initialize the UR3e robot
-            self.f = DobotMagician;
-            self.f.model.base = self.dobot_base_transform;
-            self.f.model.animate([0 0 0 0 0]);
+            self.r = LinearDobot5;
+            self.r.model.base = self.dobot_base_transform * trotx(pi/2) * troty(pi/2);
+            self.r.model.animate([0 0 0 0 0 0]);
  
             % Initialize the Franka robot
-            % self.f = FrankaER;
-            % self.f.model.base = self.franka_base_transform;
-            % self.f.model.animate([0 0 0 0 0 0 0]);
+            self.f = FrankaER;
+            self.f.model.base = self.franka_base_transform;
+            self.f.model.animate([0 0 0 0 0 0 0]);
  
             % PlaceObject("golfball.ply", [0 0 0])
  
@@ -268,7 +268,7 @@ classdef MarbleGolf< handle
         end
  
         function animateMarble(self)
-            % figure(2);
+            figure(2);
             % Marble position
             % golfball_1_pos;
             % Define marble's path (for now assume it moves in a straight line)
@@ -480,18 +480,15 @@ classdef MarbleGolf< handle
             % Define transformations for waypoints and objects
             % Make sure to go to waypoint_# every second step
  
-            T1 = transl(-0.2, -0.21, 1.3);
+            T1 = self.waypoint_A;
  
-            % T2 = transl(self.golfball_1_pos) * transl(0, 0, self.finger1_link1) * trotx(pi);
-            T2 = transl(-0.2,-0.21, 1.3);
+            T2 = transl(self.golfball_1_pos) * transl(0, 0, self.finger1_link1) * trotx(pi);
         
             % Transformation for waypoint C
-            T3 = transl(-0.2,-0.21, 1.4) * trotx(pi)
+            T3 = self.waypoint_C;
         
             % Transformation for wall 1 position
-            T4 = transl(-0.2,-0.21, 1.4);
-
-            
+            T4 = transl(-0.2, 0.2, 1.7) * trotx(pi);
         
             % Transformation for waypoint A waiting
             % T5 = self.waypoint_C;
@@ -505,7 +502,7 @@ classdef MarbleGolf< handle
  
                 
  
-                % message = num2str(self.f.model.fkine(self.f.model.getpos).T, '%.2f');
+                message = num2str(self.f.model.fkine(self.f.model.getpos).T, '%.2f');
                 %self.text_h = text(1, 1, 1,  message, 'FontSize', 15, 'Color', [0 0 0]);
  
                 
